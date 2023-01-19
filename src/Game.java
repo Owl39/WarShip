@@ -43,8 +43,11 @@ public class Game {
         Player current = user;
         Player second = bot;
 
+        CellState[][] emptyCells = GetEmptyCells();
+
         while (!IsFinished()) {
-            CellState[][] cells = GetEmptyCells();
+            CellState[][] cells = emptyCells.clone();
+
             FillItemsCells(cells, current.EnemyShips, true);
             FillItemsCells(cells, current.EnemyBombs, true);
 
