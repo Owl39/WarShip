@@ -29,4 +29,5 @@ public class Ship extends GameItem{
                     cells[coord.Row][coord.Column] = CellState.Ship;
         }
     }
+
 }

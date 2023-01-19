@@ -1,8 +1,12 @@
+import java.util.Random;
+
 abstract class GameItem {
     private Coord[] _coords;
     private boolean[] _hitted;
+    private int _decks;
 
     public GameItem(Coord coord, Direction direction, int decks) {
+        _decks = decks;
         _coords = new Coord[decks];
         _hitted = new boolean[decks];
 
@@ -28,6 +32,7 @@ abstract class GameItem {
     }
 
     public GameItem(Coord coord) {
+        _decks = 1;
         _coords = new Coord[1];
         _hitted = new boolean[1];
 
@@ -37,9 +42,13 @@ abstract class GameItem {
 
     abstract public void Print (CellState[][] cells, boolean hidden);
 
+    public int DesksCount() {
+        return _decks;
+    }
+
     public boolean Hit (Coord coord)
     {
-        for(int i=0; i < _coords.length; i++) {
+        for(int i=0; i < _decks; i++) {
             if (_coords[i].IsEqual(coord)) {
                 _hitted[i] = true;
                 return true;
@@ -50,7 +59,7 @@ abstract class GameItem {
 
     public boolean IsOccupate (Coord coord)
     {
-        for(int i=0; i < _coords.length; i++) {
+        for(int i=0; i < _decks; i++) {
             if (_coords[i].IsEqual(coord) ||
                     coord.IsEqual(_coords[i].Row - 1, _coords[i].Column - 1) ||
                     coord.IsEqual(_coords[i].Row - 1, _coords[i].Column) ||
@@ -77,24 +86,49 @@ abstract class GameItem {
 
     public boolean IsKilled()
     {
-        for(int i = 0; i < _hitted.length; i++)
+        for(int i = 0; i < _decks; i++)
             if(!_hitted[i])
                 return false;
         return true;
     }
-
+    public boolean IsHitted()
+    {
+        for(int i = 0; i < _decks; i++)
+            if(_hitted[i])
+                return true;
+        return false;
+    }
     public Coord[] GetHittedDecks() {
         int count = 0;
-        for (int i = 0; i < _hitted.length; i++)
+        for (int i = 0; i < _decks; i++)
             if (_hitted[i])
                 count++;
 
         Coord[] coords = new Coord[count];
         count = 0;
-        for (int i = 0; i < _hitted.length; i++)
+        for (int i = 0; i < _decks; i++)
             if (_hitted[i])
                 coords[count++] = _coords[i];
         return coords;
+    }
+
+    public Coord GetNextHittedDeck() {
+        Coord coord = _coords[0];
+        if (!IsHitted()) {
+            Random r = new Random();
+            coord = _coords[r.nextInt(_decks)];
+        } else {
+            for (int i = 0; i < _decks; i++)
+                if (_hitted[i] != _hitted[i + 1]) {
+                    if (_hitted[i])
+                        coord = _coords[i + 1];
+                    else
+                        coord = _coords[i];
+                    break;
+                }
+        }
+        Hit(coord);
+        return coord;
     }
 }
 

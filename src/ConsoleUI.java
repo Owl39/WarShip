@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.util.Random;
+import java.util.Scanner;
 
 public class ConsoleUI extends UI{
     public void DrawGame()
@@ -15,18 +16,16 @@ public class ConsoleUI extends UI{
         System.out.flush();
     }
 
+    public void ShowMessage(String message) {
+        System.out.print(message+"\n");
+    }
+
     public Coord GetCoord() {
         Random r = new Random();
-
-        char c = 0;
-        do {
-            try {
-                c = (char) System.in.read();
-            } catch (IOException exc) {
-            }
-        }
-        while(c != ' ');
-        return new Coord(r.nextInt(9), r.nextInt(9));
+        Scanner s= new Scanner(System.in);
+        s.nextLine();
+        //while(c == 0);
+        return new Coord(r.nextInt(10), r.nextInt(10));
     }
 
     public void DrawField(CellState[][] cells)
@@ -49,11 +48,6 @@ public class ConsoleUI extends UI{
             System.out.print('│');
             for (int j = 0; j < 10; j++) {
                 DrawCell(cells[i][j]);
-/*                if(Field[i][j] == CellState.Bomb ||
-                        Field[i][j] == CellState.Ship)// hide ships
-                    System.out.print(GetCellString(CellState.Water);
-                else*/
-                //            System.out.print(GetCellString(_ownField[i][j]));
             }
             System.out.print('│');
             System.out.print('\n');

@@ -7,12 +7,16 @@ public class Game {
     private Bot _bot = new Bot();
     private Bot _userBot = new Bot();
 
+
     private ArrayList<GameItem> _userShips = new ArrayList<GameItem>();
     private ArrayList<GameItem> _userBombs = new ArrayList<GameItem>();
     private ArrayList<Shot> _userShots = new ArrayList<Shot>();
     private ArrayList<GameItem> _botShips = new ArrayList<GameItem>();
     private ArrayList<GameItem> _botBombs = new ArrayList<GameItem>();
     private ArrayList<Shot> _botShots = new ArrayList<Shot>();
+    private Coord _coord;
+    private TurnResult _turnResult =null;
+    private Player _current = null;
 
     public Game(AbstractFabric fabric)
     {
@@ -26,41 +30,47 @@ public class Game {
         user.Me = _userBot;
         user.Enemy = _bot;
         user.Shots = _userShots;
-        user.Ships = _userShips;
-        user.Bombs = _userBombs;
         user.EnemyShips = _botShips;
         user.EnemyBombs = _botBombs;
+        user.Name = "User";
 
         Player bot = new Player();
         bot.Me = _bot;
         bot.Enemy = _userBot;
         bot.Shots = _botShots;
-        bot.Ships = _botShips;
-        bot.Bombs = _botBombs;
         bot.EnemyShips = _userShips;
         bot.EnemyBombs = _userBombs;
+        bot.Name = "Computer";
 
-        Player current = user;
+        _current = user;
         Player second = bot;
 
         CellState[][] emptyCells = GetEmptyCells();
 
+        Draw();
+
         while (!IsFinished()) {
-            CellState[][] cells = emptyCells.clone();
+            CellState[][] cells = GetEmptyCells();
 
-            FillItemsCells(cells, current.EnemyShips, true);
-            FillItemsCells(cells, current.EnemyBombs, true);
+            FillItemsCells(cells, _current.EnemyShips, true);
+            FillItemsCells(cells, _current.EnemyBombs, true);
+            FillShotsCells(cells, _current.Shots);
 
-            Coord coord = current.Me.MakeTurn(cells, current.Shots);
-            TurnResult result = current.Enemy.GetTurnResult(coord, current.EnemyShips, current.EnemyBombs);
-            current.Me.SetTurnResult(result, coord, current.EnemyShips, current.Shots);
+
+                _coord = _current.Me.MakeTurn(cells, _current.Shots);
+                _turnResult = _current.Enemy.GetTurnResult(_coord, _current.EnemyShips, _current.EnemyBombs);
+                _current.Me.SetTurnResult(_turnResult, _coord, _current.EnemyShips, _current.Shots);
+                if (_turnResult == TurnResult.Bomb) {
+                    Coord hittedDesk = _current.Me.GetNextHittedDeck(second.EnemyShips);
+                    second.Me.SetTurnResult(TurnResult.Hit, hittedDesk, second.EnemyShips, second.Shots);
+                }
+                if (_turnResult != TurnResult.Hit && _turnResult != TurnResult.Kill) {
+                    Player temp = _current;
+                    _current = second;
+                    second = temp;
+                }
+
             Draw();
-            if(result != TurnResult.Hit && result != TurnResult.Kill) {
-                Player temp = current;
-                current = second;
-                second = temp;
-            }
-
             _ui.GetCoord();
         }
     }
@@ -93,16 +103,42 @@ public class Game {
         CellState[][] cells = GetEmptyCells();
         FillItemsCells(cells, _userShips, false);
         FillItemsCells(cells, _userBombs, false);
-        FillShotsCells(cells, _userShots);
+        FillShotsCells(cells, _botShots);
         _ui.DrawField(cells);
 
         cells = GetEmptyCells();
         FillItemsCells(cells, _botShips, true);
         FillItemsCells(cells, _botBombs, true);
-        FillShotsCells(cells, _botShots);
+        FillShotsCells(cells, _userShots);
         _ui.DrawField(cells);
+        DrawResult();
     }
 
+    private void DrawResult() {
+        if (_turnResult != null) {
+            String message = "";
+            _ui.ShowMessage("Attac " + (char) ('A' + _coord.Row) + (_coord.Column + 1));
+            switch (_turnResult) {
+                case Miss:
+                    message = "Miss";
+                    break;
+                case Hit:
+                    message = "Hit";
+                    break;
+                case Kill:
+                    message = "Kill";
+                    break;
+                case Bomb:
+                    message = "Bomb";
+                    break;
+            }
+            _ui.ShowMessage(message);
+        }
+        if (IsFinished())
+            _ui.ShowMessage("Game over! Winner " + _current.Name);
+        else
+            _ui.ShowMessage("Turn of " + _current.Name);
+    }
     private void Initialize()
     {
         _userShips.clear();
@@ -116,10 +152,6 @@ public class Game {
         CreateBombs(_userShips, _userBombs);
         CreateShips(_botShips);
         CreateBombs(_botShips, _botBombs);
-        //_bot.SetTurnResult(_ownField,new Coord(5,5),TurnResult.Kill);
-        //_bot.SetTurnResult(_ownField,new Coord(0,0),TurnResult.Bomb);
-        //_bot.SetTurnResult(_ownField,new Coord(5,9),TurnResult.Bomb);
-        //_bot.SetTurnResult(_ownField,new Coord(0,9),TurnResult.Bomb);
     }
 
     private CellState[][] GetEmptyCells()
@@ -162,8 +194,8 @@ public class Game {
         while (isOccupate) {
             isOccupate = false;
 
-            coord = new Coord(r.nextInt(9), r.nextInt(9));
-            direction = Direction.values()[r.nextInt(1, 4)];
+            coord = new Coord(r.nextInt(10), r.nextInt(10));
+            direction = Direction.values()[r.nextInt(4)];
             for (int i = 0; i < decks && !isOccupate; i++) {
                 Coord nextCoord = null;
                 switch (direction) {
@@ -203,7 +235,7 @@ public class Game {
         Coord coord = null;
         while (isOccupate) {
             isOccupate = false;
-            coord = new Coord(r.nextInt(9), r.nextInt(9));
+            coord = new Coord(r.nextInt(10), r.nextInt(10));
             for (int it = 0; it < ships.size() && !isOccupate; it++) {
                 if (ships.get(it).IsOccupate(coord))
                     isOccupate = true;

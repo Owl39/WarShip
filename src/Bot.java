@@ -3,7 +3,6 @@ import java.util.Random;
 
 public class Bot {
     private GameItem _hittedShip = null;
-
     public TurnResult GetTurnResult(Coord coord, ArrayList<GameItem> ships, ArrayList<GameItem> bombs) {
         for (int i = 0; i < ships.size(); i++)
             if (ships.get(i).Hit(coord)) {
@@ -28,6 +27,8 @@ public class Bot {
                     if (ships.get(i).Hit(coord)) {
                         _hittedShip = ships.get(i);
                     }
+                if(_hittedShip.IsKilled())
+                    _hittedShip = null;
                 break;
             case Kill:
                 _hittedShip = null;
@@ -38,20 +39,36 @@ public class Bot {
         }
     }
 
+    public Coord GetNextHittedDeck(ArrayList<GameItem> ships) {
+        for (int i = 0; i < ships.size(); i++)
+            if (ships.get(i).IsHitted() && !ships.get(i).IsKilled())
+                return ships.get(i).GetNextHittedDeck();
+
+        for (int i = ships.size() - 1; i >= 0; i--)
+            if (!ships.get(i).IsKilled())
+                return ships.get(i).GetNextHittedDeck();
+
+        return new Coord(0, 0);
+    }
+
     public Coord MakeTurn(CellState[][] field, ArrayList<Shot> shots)
             throws Exception {
 
         if (_hittedShip != null)
             return AttackShip(shots);
 
-        Random r = new Random();
-        for (int i = 0; i < 100; i++) {
-            int row = r.nextInt(9);
-            int column = r.nextInt(9);
-            if (field[row][column] == CellState.Empty)
-                return new Coord(row, column);
+        ArrayList<Coord> coords = new ArrayList<Coord>();
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                if (field[i][j] == CellState.Empty)
+                    coords.add(new Coord(i, j));
+            }
         }
-        throw new Exception("Unable find new turn coordinates");
+        if(coords.size() == 0)
+            throw new Exception("Unable find new turn coordinates");
+
+        Random random = new Random();
+        return coords.get(random.nextInt(coords.size()));
     }
 
 
@@ -59,9 +76,9 @@ public class Bot {
         Coord[] hittedDesk = _hittedShip.GetHittedDecks();
         Coord[] toCheck = GetCoordsToCheck(hittedDesk);
 
-        Random r = new Random();
+        Random random = new Random();
         while(true) {
-            int i = r.nextInt(toCheck.length);
+            int i = random.nextInt(toCheck.length);
             if (toCheck[i].Row < 0 ||
                     toCheck[i].Row > 9 ||
                     toCheck[i].Column < 0 ||
