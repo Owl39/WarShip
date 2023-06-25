@@ -1,3 +1,5 @@
+package src;
+
 import java.util.Random;
 
 abstract class GameItem {
@@ -11,21 +13,12 @@ abstract class GameItem {
         _hitted = new boolean[decks];
 
         for (int i = 0; i < decks; i++) {
-            Coord nextCoord = null;
-            switch (direction) {
-                case Left:
-                    nextCoord = new Coord(coord.Row, coord.Column - i);
-                    break;
-                case Right:
-                    nextCoord = new Coord(coord.Row, coord.Column + i);
-                    break;
-                case Top:
-                    nextCoord = new Coord(coord.Row - i, coord.Column);
-                    break;
-                case Bottom:
-                    nextCoord = new Coord(coord.Row + i, coord.Column);
-                    break;
-            }
+            Coord nextCoord = switch (direction) {
+                case Left -> new Coord(coord.Row, coord.Column - i);
+                case Right -> new Coord(coord.Row, coord.Column + i);
+                case Top -> new Coord(coord.Row - i, coord.Column);
+                case Bottom -> new Coord(coord.Row + i, coord.Column);
+            };
             _coords[i] = nextCoord;
             _hitted[i] = false;
         }
@@ -37,18 +30,12 @@ abstract class GameItem {
         _hitted = new boolean[1];
 
         _coords[0] = coord;
-        _hitted[0] = false;
     }
 
-    abstract public void Print (CellState[][] cells, boolean hidden);
+    abstract public void Print(CellState[][] cells, boolean hidden);
 
-    public int DesksCount() {
-        return _decks;
-    }
-
-    public boolean Hit (Coord coord)
-    {
-        for(int i=0; i < _decks; i++) {
+    public boolean Hit(Coord coord) {
+        for (int i = 0; i < _decks; i++) {
             if (_coords[i].IsEqual(coord)) {
                 _hitted[i] = true;
                 return true;
@@ -57,9 +44,8 @@ abstract class GameItem {
         return false;
     }
 
-    public boolean IsOccupate (Coord coord)
-    {
-        for(int i=0; i < _decks; i++) {
+    public boolean IsOccupate(Coord coord) {
+        for (int i = 0; i < _decks; i++) {
             if (_coords[i].IsEqual(coord) ||
                     coord.IsEqual(_coords[i].Row - 1, _coords[i].Column - 1) ||
                     coord.IsEqual(_coords[i].Row - 1, _coords[i].Column) ||
@@ -74,30 +60,28 @@ abstract class GameItem {
         return false;
     }
 
-    protected Coord[] Coords()
-    {
+    protected Coord[] Coords() {
         return _coords;
     }
 
-    protected boolean[] Hitted()
-    {
+    protected boolean[] Hitted() {
         return _hitted;
     }
 
-    public boolean IsKilled()
-    {
-        for(int i = 0; i < _decks; i++)
-            if(!_hitted[i])
+    public boolean IsKilled() {
+        for (int i = 0; i < _decks; i++)
+            if (!_hitted[i])
                 return false;
         return true;
     }
-    public boolean IsHitted()
-    {
-        for(int i = 0; i < _decks; i++)
-            if(_hitted[i])
+
+    public boolean IsHitted() {
+        for (int i = 0; i < _decks; i++)
+            if (_hitted[i])
                 return true;
         return false;
     }
+
     public Coord[] GetHittedDecks() {
         int count = 0;
         for (int i = 0; i < _decks; i++)

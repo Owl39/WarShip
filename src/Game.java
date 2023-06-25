@@ -1,78 +1,48 @@
-import java.lang.reflect.Field;
+package src;
+
 import java.util.ArrayList;
 import java.util.Random;
 
-public class Game {
+public class Game implements CallbackListener {
     private UI _ui;
     private Bot _bot = new Bot();
     private Bot _userBot = new Bot();
+    private Player _userPlayer;
+    private Player _botPlayer;
 
+    private boolean _playerTurn;
+    private ArrayList<GameItem> _userShips = new ArrayList<>();
+    private ArrayList<GameItem> _userBombs = new ArrayList<>();
+    private ArrayList<Shot> _userShots = new ArrayList<>();
+    private ArrayList<GameItem> _botShips = new ArrayList<>();
+    private ArrayList<GameItem> _botBombs = new ArrayList<>();
+    private ArrayList<Shot> _botShots = new ArrayList<>();
 
-    private ArrayList<GameItem> _userShips = new ArrayList<GameItem>();
-    private ArrayList<GameItem> _userBombs = new ArrayList<GameItem>();
-    private ArrayList<Shot> _userShots = new ArrayList<Shot>();
-    private ArrayList<GameItem> _botShips = new ArrayList<GameItem>();
-    private ArrayList<GameItem> _botBombs = new ArrayList<GameItem>();
-    private ArrayList<Shot> _botShots = new ArrayList<Shot>();
-    private Coord _coord;
-    private TurnResult _turnResult =null;
-    private Player _current = null;
-
-    public Game(AbstractFabric fabric)
-    {
-        _ui = fabric.GetUI();
+    public Game(UI ui) {
+        _ui = ui;
+        _ui.SetCallbackListener(this);
     }
 
-    public void Start()
-            throws Exception {
+    public void Start() {
         Initialize();
-        Player user = new Player();
-        user.Me = _userBot;
-        user.Enemy = _bot;
-        user.Shots = _userShots;
-        user.EnemyShips = _botShips;
-        user.EnemyBombs = _botBombs;
-        user.Name = "User";
+        _userPlayer = new Player();
+        _userPlayer.Me = _userBot;
+        _userPlayer.Enemy = _bot;
+        _userPlayer.Shots = _userShots;
+        _userPlayer.EnemyShips = _botShips;
+        _userPlayer.EnemyBombs = _botBombs;
+        _userPlayer.Name = "User";
 
-        Player bot = new Player();
-        bot.Me = _bot;
-        bot.Enemy = _userBot;
-        bot.Shots = _botShots;
-        bot.EnemyShips = _userShips;
-        bot.EnemyBombs = _userBombs;
-        bot.Name = "Computer";
+        _botPlayer = new Player();
+        _botPlayer.Me = _bot;
+        _botPlayer.Enemy = _userBot;
+        _botPlayer.Shots = _botShots;
+        _botPlayer.EnemyShips = _userShips;
+        _botPlayer.EnemyBombs = _userBombs;
+        _botPlayer.Name = "Computer";
 
-        _current = user;
-        Player second = bot;
-
-        CellState[][] emptyCells = GetEmptyCells();
-
+        _playerTurn = true;
         Draw();
-
-        while (!IsFinished()) {
-            CellState[][] cells = GetEmptyCells();
-
-            FillItemsCells(cells, _current.EnemyShips, true);
-            FillItemsCells(cells, _current.EnemyBombs, true);
-            FillShotsCells(cells, _current.Shots);
-
-
-                _coord = _current.Me.MakeTurn(cells, _current.Shots);
-                _turnResult = _current.Enemy.GetTurnResult(_coord, _current.EnemyShips, _current.EnemyBombs);
-                _current.Me.SetTurnResult(_turnResult, _coord, _current.EnemyShips, _current.Shots);
-                if (_turnResult == TurnResult.Bomb) {
-                    Coord hittedDesk = _current.Me.GetNextHittedDeck(second.EnemyShips);
-                    second.Me.SetTurnResult(TurnResult.Hit, hittedDesk, second.EnemyShips, second.Shots);
-                }
-                if (_turnResult != TurnResult.Hit && _turnResult != TurnResult.Kill) {
-                    Player temp = _current;
-                    _current = second;
-                    second = temp;
-                }
-
-            Draw();
-            _ui.GetCoord();
-        }
     }
 
     private boolean IsFinished() {
@@ -81,7 +51,7 @@ public class Game {
             if (!_userShips.get(it).IsKilled())
                 allKilled = false;
         if (allKilled) {
-            //_ui.PrintGameOver("Computer");
+            _ui.ShowMessage("Computer wins!");
             return true;
         }
 
@@ -90,57 +60,30 @@ public class Game {
             if (!_botShips.get(it).IsKilled())
                 allKilled = false;
         if (allKilled) {
-            //_ui.PrintGameOver("User");
+            _ui.ShowMessage("User wins!");
             return true;
         }
         return false;
     }
 
-    private void Draw()
-    {
+
+    private void Draw() {
         _ui.DrawGame();
 
         CellState[][] cells = GetEmptyCells();
         FillItemsCells(cells, _userShips, false);
         FillItemsCells(cells, _userBombs, false);
         FillShotsCells(cells, _botShots);
-        _ui.DrawField(cells);
+        _ui.DrawField(cells, true);
 
         cells = GetEmptyCells();
         FillItemsCells(cells, _botShips, true);
         FillItemsCells(cells, _botBombs, true);
         FillShotsCells(cells, _userShots);
-        _ui.DrawField(cells);
-        DrawResult();
+        _ui.DrawField(cells, false);
     }
 
-    private void DrawResult() {
-        if (_turnResult != null) {
-            String message = "";
-            _ui.ShowMessage("Attac " + (char) ('A' + _coord.Row) + (_coord.Column + 1));
-            switch (_turnResult) {
-                case Miss:
-                    message = "Miss";
-                    break;
-                case Hit:
-                    message = "Hit";
-                    break;
-                case Kill:
-                    message = "Kill";
-                    break;
-                case Bomb:
-                    message = "Bomb";
-                    break;
-            }
-            _ui.ShowMessage(message);
-        }
-        if (IsFinished())
-            _ui.ShowMessage("Game over! Winner " + _current.Name);
-        else
-            _ui.ShowMessage("Turn of " + _current.Name);
-    }
-    private void Initialize()
-    {
+    private void Initialize() {
         _userShips.clear();
         _userBombs.clear();
         _userShots.clear();
@@ -154,23 +97,20 @@ public class Game {
         CreateBombs(_botShips, _botBombs);
     }
 
-    private CellState[][] GetEmptyCells()
-    {
+    private CellState[][] GetEmptyCells() {
         CellState[][] cells = new CellState[10][10];
-        for (int i=0;i < 10; i++)
-            for (int j=0;j < 10; j++)
+        for (int i = 0; i < 10; i++)
+            for (int j = 0; j < 10; j++)
                 cells[i][j] = CellState.Empty;
         return cells;
     }
-    private void FillItemsCells(CellState[][] cells, ArrayList<GameItem> items, boolean hidden)
-    {
-        for(int it = 0; it < items.size(); it++)
-            items.get(it).Print(cells, hidden);
+
+    private void FillItemsCells(CellState[][] cells, ArrayList<GameItem> items, boolean hidden) {
+        for (GameItem item : items) item.Print(cells, hidden);
     }
-    private void FillShotsCells(CellState[][] cells, ArrayList<Shot> shots)
-    {
-        for(int it = 0; it < shots.size(); it++)
-            shots.get(it).Print(cells);
+
+    private void FillShotsCells(CellState[][] cells, ArrayList<Shot> shots) {
+        for (Shot shot : shots) shot.Print(cells);
     }
 
     public void CreateShips(ArrayList<GameItem> items) {
@@ -197,21 +137,12 @@ public class Game {
             coord = new Coord(r.nextInt(10), r.nextInt(10));
             direction = Direction.values()[r.nextInt(4)];
             for (int i = 0; i < decks && !isOccupate; i++) {
-                Coord nextCoord = null;
-                switch (direction) {
-                    case Left:
-                        nextCoord = new Coord(coord.Row, coord.Column - i);
-                        break;
-                    case Right:
-                        nextCoord = new Coord(coord.Row, coord.Column + i);
-                        break;
-                    case Top:
-                        nextCoord = new Coord(coord.Row - i, coord.Column);
-                        break;
-                    case Bottom:
-                        nextCoord = new Coord(coord.Row + i, coord.Column);
-                        break;
-                }
+                Coord nextCoord = switch (direction) {
+                    case Left -> new Coord(coord.Row, coord.Column - i);
+                    case Right -> new Coord(coord.Row, coord.Column + i);
+                    case Top -> new Coord(coord.Row - i, coord.Column);
+                    case Bottom -> new Coord(coord.Row + i, coord.Column);
+                };
                 if (nextCoord.Row < 0 ||
                         nextCoord.Row > 9 ||
                         nextCoord.Column < 0 ||
@@ -219,8 +150,8 @@ public class Game {
                     isOccupate = true;
                     continue;
                 }
-                for (int it = 0; it < items.size(); it++)
-                    if (items.get(it).IsOccupate(nextCoord)) {
+                for (GameItem item : items)
+                    if (item.IsOccupate(nextCoord)) {
                         isOccupate = true;
                         break;
                     }
@@ -246,5 +177,87 @@ public class Game {
             }
         }
         bombs.add(new Bomb(coord));
+    }
+
+    private void PlayerTurn(Coord coord) {
+        CellState[][] cells = GetEmptyCells();
+        FillItemsCells(cells, _botShips, true);
+        FillItemsCells(cells, _botBombs, true);
+        FillShotsCells(cells, _userShots);
+
+        if (IsFinished()) {
+            return;
+        }
+
+        if (cells[coord.Row][coord.Column] != CellState.Empty)
+            return;
+        TurnResult turnResult = _userPlayer.Enemy.GetTurnResult(coord, _userPlayer.EnemyShips, _userPlayer.EnemyBombs);
+        _userPlayer.Me.SetTurnResult(turnResult, coord, _userPlayer.EnemyShips, _userPlayer.Shots);
+        if (turnResult == TurnResult.Bomb) {
+            Coord hittedDesk = _userPlayer.Me.GetNextHittedDeck(_botPlayer.EnemyShips);
+            _botPlayer.Me.SetTurnResult(TurnResult.Hit, hittedDesk, _botPlayer.EnemyShips, _botPlayer.Shots);
+        }
+        DrawField();
+        if (turnResult == TurnResult.Hit || turnResult == TurnResult.Kill)
+            return;
+
+        _playerTurn = false;
+        BotTurn();
+    }
+
+    private void BotTurn() {
+        while (!IsFinished()) {
+            CellState[][] cells = GetEmptyCells();
+            FillItemsCells(cells, _userShips, true);
+            FillItemsCells(cells, _userBombs, true);
+            FillShotsCells(cells, _botShots);
+
+            Coord coord;
+            try {
+                coord = _botPlayer.Me.MakeTurn(cells, _botPlayer.Shots);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            TurnResult turnResult = _botPlayer.Enemy.GetTurnResult(coord, _botPlayer.EnemyShips, _botPlayer.EnemyBombs);
+            _botPlayer.Me.SetTurnResult(turnResult, coord, _botPlayer.EnemyShips, _botPlayer.Shots);
+
+            if (turnResult == TurnResult.Bomb) {
+                Coord hittedDesk = _botPlayer.Me.GetNextHittedDeck(_userPlayer.EnemyShips);
+                _userPlayer.Me.SetTurnResult(TurnResult.Hit, hittedDesk, _userPlayer.EnemyShips, _userPlayer.Shots);
+                DrawField();
+                _playerTurn = true;
+                return;
+            }
+            DrawField();
+            if (turnResult != TurnResult.Hit && turnResult != TurnResult.Kill) {
+                _playerTurn = true;
+                return;
+            }
+        }
+    }
+
+    private void DrawField() {
+
+        CellState[][] cells = GetEmptyCells();
+        FillItemsCells(cells, _userShips, false);
+        FillItemsCells(cells, _userBombs, false);
+        FillShotsCells(cells, _botShots);
+        _ui.DrawField(cells, true);
+
+        cells = GetEmptyCells();
+        FillItemsCells(cells, _botShips, true);
+        FillItemsCells(cells, _botBombs, true);
+        FillShotsCells(cells, _userShots);
+        _ui.DrawField(cells, false);
+
+        _ui.Repaint();
+    }
+
+    @Override
+    public void onStep(Coord coord) {
+        if (!_playerTurn)
+            return;
+        PlayerTurn(coord);
     }
 }

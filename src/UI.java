@@ -1,6 +1,17 @@
-abstract class UI {
-    abstract public void DrawGame();
-    abstract public void DrawField(CellState[][] cells);
-    abstract public Coord GetCoord();
-    abstract public void ShowMessage(String message);
+package src;
+
+interface UI {
+    void DrawGame();
+
+    void DrawField(CellState[][] cells, boolean userField);
+
+    void SetCallbackListener(CallbackListener listener);
+
+    void ShowMessage(String message);
+
+    void Repaint();
+}
+
+interface CallbackListener {
+    void onStep(Coord coord);
 }
